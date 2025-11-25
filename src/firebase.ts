@@ -4,7 +4,7 @@ import { getAuth } from "firebase/auth";
 
 
 const firebaseConfig = {
-    apiKey: "",
+    apiKey: "AIzaSyCxALZRinWiRmRP5upDKitLIiM0qrOLkSY",
     authDomain: "travelog-fb4c1.firebaseapp.com",
     projectId: "travelog-fb4c1",
     storageBucket: "travelog-fb4c1.appspot.com",
