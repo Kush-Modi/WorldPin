@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import GlobeMap from '../components/GlobeMap';
+import GlobeMap, { type MapStyle } from '../components/GlobeMap';
 import AddPlaceModal from '../components/AddPlaceModal';
-import { LogOut, Plus, Eye, EyeOff, MapPin } from 'lucide-react';
+import { LogOut, Plus, Eye, EyeOff, MapPin, Layers, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../supabase';
 
@@ -38,6 +38,8 @@ export default function MyGlobe() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [places, setPlaces] = useState<Place[]>([]);
     const [loadingPlaces, setLoadingPlaces] = useState(true);
+    const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
+    const [isStyleMenuOpen, setIsStyleMenuOpen] = useState(false);
 
     useEffect(() => {
         if (!user) return;
@@ -206,6 +208,13 @@ export default function MyGlobe() {
 
     const showEmptyState = !loadingPlaces && places.length === 0;
 
+    const styles: { id: MapStyle; label: string }[] = [
+        { id: 'dark', label: 'Dark Mode' },
+        { id: 'light', label: 'Light Mode' },
+        { id: 'satellite', label: 'Satellite' },
+        { id: 'streets', label: 'Streets' },
+    ];
+
     return (
         <div className="h-screen w-screen flex flex-col overflow-hidden bg-gradient-to-b from-black via-slate-950 to-black">
             {/* Header */}
@@ -225,6 +234,44 @@ export default function MyGlobe() {
                 </div>
 
                 <div className="flex items-center gap-4">
+                    {/* Map Style Selector */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsStyleMenuOpen(!isStyleMenuOpen)}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-slate-300 transition-colors"
+                        >
+                            <Layers size={14} />
+                            <span>{styles.find(s => s.id === mapStyle)?.label}</span>
+                            <ChevronDown size={12} className={`transition-transform ${isStyleMenuOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isStyleMenuOpen && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() => setIsStyleMenuOpen(false)}
+                                />
+                                <div className="absolute top-full right-0 mt-2 w-40 bg-slate-900 border border-white/10 rounded-lg shadow-xl overflow-hidden z-50 py-1">
+                                    {styles.map((style) => (
+                                        <button
+                                            key={style.id}
+                                            onClick={() => {
+                                                setMapStyle(style.id);
+                                                setIsStyleMenuOpen(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-xs hover:bg-white/5 transition-colors ${mapStyle === style.id ? 'text-teal-400 bg-teal-500/10' : 'text-slate-300'
+                                                }`}
+                                        >
+                                            {style.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="h-6 w-px bg-white/10" />
+
                     <button
                         onClick={togglePrivacy}
                         className="p-2 text-slate-400 hover:text-white transition-colors rounded-full hover:bg-white/10"
@@ -232,7 +279,7 @@ export default function MyGlobe() {
                     >
                         {privacyMode ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
-                    <div className="h-6 w-px bg-white/10" />
+
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-2 text-rose-400 hover:text-rose-300 transition-colors text-xs font-medium"
@@ -245,31 +292,31 @@ export default function MyGlobe() {
 
             {/* Globe Container */}
             <div className="flex-1 relative mt-16">
-                <GlobeMap places={places} onDelete={handleDeletePlace} />
+                <GlobeMap places={places} onDelete={handleDeletePlace} mapStyle={mapStyle} />
                 {loadingPlaces && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="px-4 py-2 rounded-full bg-black/60 border border-white/10 text-xs text-slate-300">
-                            Loading your pins on the globe…
+                        <div className="px-4 py-2 rounded-full bg-black/60 border border-white/10 text-xs text-slate-300 backdrop-blur-md">
+                            Loading your pins...
                         </div>
                     </div>
                 )}
                 {showEmptyState && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-slate-400 text-sm pointer-events-none">
                         <p className="mb-1 font-medium text-slate-200">
-                            Start your first WorldPin.
+                            Start your journey.
                         </p>
-                        <p>Use the teal + button to add a place you&apos;ve visited.</p>
+                        <p className="text-xs opacity-70">Click the + button to add a memory.</p>
                     </div>
                 )}
             </div>
 
             {/* FAB */}
             <button
-                className="fixed bottom-6 right-6 w-16 h-16 bg-teal-500 hover:bg-teal-400 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform duration-150 hover:scale-110 active:scale-95 z-40"
+                className="fixed bottom-8 right-8 w-14 h-14 bg-white text-black rounded-full shadow-[0_0_40px_rgba(255,255,255,0.3)] flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-[0_0_60px_rgba(255,255,255,0.5)] active:scale-95 z-40 group"
                 onClick={() => setIsAddModalOpen(true)}
                 aria-label="Add place"
             >
-                <Plus size={30} />
+                <Plus size={24} className="group-hover:rotate-90 transition-transform duration-300" />
             </button>
 
             {/* Add Place Modal */}
