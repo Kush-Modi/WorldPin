@@ -1,73 +1,63 @@
-# React + TypeScript + Vite
+# WorldPin 🌍📍
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Pin your journeys on a living globe.**
 
-Currently, two official plugins are available:
+![WorldPin Preview](preview.png)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+WorldPin is an immersive 3D travel log application that allows you to track your adventures on an interactive globe. Share your journey with friends, view their maps, and keep your memories alive with photos and detailed descriptions.
 
-## React Compiler
+## ✨ Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+*   **Interactive 3D Globe**: Powered by MapLibre GL JS, offering a stunning and responsive 3D experience.
+*   **Pin Your Memories**: Add markers to locations you've visited, complete with photos, dates, and ratings.
+*   **Friendship System**: Search for users, send friend requests, and build your network of fellow travelers.
+*   **Social Exploration**: View your friends' globes in read-only mode to see where they've been.
+*   **Real-time Notifications**: Get instant alerts for new friend requests.
+*   **Customizable Maps**: Switch between Dark, Light, Satellite, and Street views to suit your style.
+*   **Privacy Mode**: Toggle privacy settings to control visibility (coming soon).
+*   **Secure Authentication**: Robust login and signup system powered by Supabase.
 
-## Expanding the ESLint configuration
+## 🛠️ Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+*   **Frontend**: React, TypeScript, Vite
+*   **Styling**: Tailwind CSS, Lucide React (Icons)
+*   **Map Engine**: MapLibre GL JS
+*   **Backend & Database**: Supabase (PostgreSQL, Auth, Realtime, Storage)
+*   **State Management**: React Context API
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🚀 Getting Started
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/Kush-Modi/WorldPin.git
+    cd WorldPin
+    ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+2.  **Install dependencies**
+    ```bash
+    npm install
+    ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+3.  **Set up Environment Variables**
+    Create a `.env` file in the root directory and add your Supabase credentials:
+    ```env
+    VITE_SUPABASE_URL=your_supabase_url
+    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+    ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+4.  **Run the development server**
+    ```bash
+    npm run dev
+    ```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 📸 Screenshots
+
+*(Add more screenshots here if available)*
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
