@@ -21,7 +21,7 @@ const COLORS = [
 const AntigravityParticles: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const mouseRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2, radius: 150 });
-    const animationFrameRef = useRef<number>();
+    const animationFrameRef = useRef<number | undefined>(undefined);
 
     useEffect(() => {
         const canvas = canvasRef.current;

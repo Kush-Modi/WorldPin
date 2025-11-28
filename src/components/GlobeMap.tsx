@@ -18,7 +18,7 @@ interface GlobeMapProps {
     places: Place[];
     mapStyle: MapStyle;
     onMapLoad?: (map: MapLibreMap) => void;
-    onDelete: (placeId: string) => Promise<void>;
+    onDelete?: (placeId: string) => Promise<void>;
 }
 
 const MAP_STYLES: Record<MapStyle, any> = {
@@ -179,29 +179,51 @@ export default function GlobeMap({ places, mapStyle, onMapLoad, onDelete }: Glob
 
     // Handle style changes
     useEffect(() => {
-        if (map.current) {
-            map.current.setStyle(MAP_STYLES[mapStyle]);
+        if (!map.current) return;
 
-            // Re-apply fog after style change
-            map.current.once('style.load', () => {
-                (map.current as any)?.setFog({
-                    color: 'rgb(10, 10, 15)',
-                    'high-color': 'rgb(0, 0, 0)',
-                    'horizon-blend': 0.2,
-                    'space-color': 'rgb(0, 0, 0)',
-                    'star-intensity': 0.6
+        const updateStyle = () => {
+            if (!map.current) return;
+
+            // Check if style is already set to avoid reload
+            // Note: MapLibre doesn't expose current style URL easily in all versions, 
+            // but we can trust React's prop change for now.
+            // However, we must ensure map is not in the middle of another update if possible.
+
+            try {
+                map.current.setStyle(MAP_STYLES[mapStyle]);
+
+                // Re-apply fog after style change
+                map.current.once('styledata', () => {
+                    if (!map.current) return;
+                    (map.current as any)?.setFog({
+                        color: 'rgb(10, 10, 15)',
+                        'high-color': 'rgb(0, 0, 0)',
+                        'horizon-blend': 0.2,
+                        'space-color': 'rgb(0, 0, 0)',
+                        'star-intensity': 0.6
+                    });
+
+                    // Update existing markers colors
+                    const colors = PIN_COLORS[mapStyle];
+                    Object.values(markers.current).forEach(marker => {
+                        const el = marker.getElement();
+                        el.style.setProperty('--pin-color', colors.color);
+                        el.style.setProperty('--pin-glow', colors.glow);
+                        el.style.setProperty('--pin-halo', colors.halo);
+                    });
                 });
-            });
+            } catch (e) {
+                console.warn('Error setting map style:', e);
+            }
+        };
 
-            // Update existing markers colors
-            const colors = PIN_COLORS[mapStyle];
-            Object.values(markers.current).forEach(marker => {
-                const el = marker.getElement();
-                el.style.setProperty('--pin-color', colors.color);
-                el.style.setProperty('--pin-glow', colors.glow);
-                el.style.setProperty('--pin-halo', colors.halo);
-            });
+        // If map is not loaded, wait for it
+        if (!map.current.loaded()) {
+            map.current.once('load', updateStyle);
+        } else {
+            updateStyle();
         }
+
     }, [mapStyle]);
 
     // Update markers when places change
@@ -259,8 +281,10 @@ export default function GlobeMap({ places, mapStyle, onMapLoad, onDelete }: Glob
     }, [places]);
 
     const handleDeletePlace = async (placeId: string) => {
-        await onDelete(placeId);
-        setSelectedPlace(null);
+        if (onDelete) {
+            await onDelete(placeId);
+            setSelectedPlace(null);
+        }
     };
 
     if (error) {

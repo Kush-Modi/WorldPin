@@ -6,6 +6,9 @@ import AddPlaceModal from '../components/AddPlaceModal';
 import { LogOut, Plus, Eye, EyeOff, MapPin, Layers, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../supabase';
+import UserSearch from '../components/UserSearch';
+import NotificationCenter from '../components/NotificationCenter';
+import FriendsList from '../components/FriendsList';
 
 type Place = {
     id: string;
@@ -40,39 +43,54 @@ export default function MyGlobe() {
     const [loadingPlaces, setLoadingPlaces] = useState(true);
     const [mapStyle, setMapStyle] = useState<MapStyle>('dark');
     const [isStyleMenuOpen, setIsStyleMenuOpen] = useState(false);
+    const [viewUserId, setViewUserId] = useState<string | null>(null);
+
+    const targetUserId = viewUserId || user?.id || null;
+    const isOwner = user && targetUserId === user.id;
 
     useEffect(() => {
         if (!user) return;
 
         const fetchPlaces = async () => {
+            console.log('Fetching places for:', targetUserId);
             setLoadingPlaces(true);
-            const { data, error } = await supabase
-                .from('places')
-                .select('*')
-                .eq('user_id', user.uid);
 
-            if (error) {
-                console.error('Error fetching places:', error);
-                toast.error('Failed to load places');
+            // Safety timeout
+            const timeoutId = setTimeout(() => {
                 setLoadingPlaces(false);
-                return;
-            }
+                toast.error('Request timed out');
+            }, 10000);
 
-            if (data) {
-                const mapped: Place[] = data.map((item: any) => ({
-                    id: item.id,
-                    name: item.name,
-                    fullName: item.full_name,
-                    location: item.location,
-                    photos: item.photos,
-                    createdAt: new Date(item.created_at),
-                    visitDate: item.visit_date ? new Date(item.visit_date) : undefined,
-                    description: item.description,
-                    rating: item.rating
-                }));
-                setPlaces(mapped);
+            try {
+                const { data, error } = await supabase
+                    .from('places')
+                    .select('*')
+                    .eq('user_id', targetUserId);
+
+                clearTimeout(timeoutId);
+
+                if (error) {
+                    console.error('Error fetching places:', error);
+                    toast.error('Failed to load places');
+                } else if (data) {
+                    const mapped: Place[] = data.map((item: any) => ({
+                        id: item.id,
+                        name: item.name,
+                        fullName: item.full_name,
+                        location: item.location,
+                        photos: item.photos,
+                        createdAt: new Date(item.created_at),
+                        visitDate: item.visit_date ? new Date(item.visit_date) : undefined,
+                        description: item.description,
+                        rating: item.rating
+                    }));
+                    setPlaces(mapped);
+                }
+            } catch (err) {
+                console.error('Unexpected error fetching places:', err);
+            } finally {
+                setLoadingPlaces(false);
             }
-            setLoadingPlaces(false);
         };
 
         fetchPlaces();
@@ -85,7 +103,7 @@ export default function MyGlobe() {
                     event: '*',
                     schema: 'public',
                     table: 'places',
-                    filter: `user_id=eq.${user.uid}`,
+                    filter: `user_id=eq.${targetUserId}`,
                 },
                 () => {
                     fetchPlaces();
@@ -96,16 +114,32 @@ export default function MyGlobe() {
         return () => {
             channel.unsubscribe();
         };
-    }, [user]);
+    }, [user, targetUserId]);
 
     const handleLogout = async () => {
-        try {
-            await logout();
-            navigate('/login');
-            toast.success('Logged out successfully');
-        } catch {
-            toast.error('Failed to logout');
-        }
+        const performLogout = async () => {
+            try {
+                // Race between actual logout and a 2-second timeout
+                await Promise.race([
+                    logout(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Logout timeout')), 2000))
+                ]);
+                navigate('/login');
+                toast.success('Logged out successfully');
+            } catch (error) {
+                console.error('Logout failed or timed out:', error);
+                // Force logout/redirect if standard logout fails or times out
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = '/login';
+            }
+        };
+
+        toast.promise(performLogout(), {
+            loading: 'Logging out...',
+            success: 'See you soon!',
+            error: 'Logged out (forced)',
+        });
     };
 
     const togglePrivacy = () => {
@@ -129,7 +163,7 @@ export default function MyGlobe() {
                     throw new Error(`File ${photo.name} exceeds 25MB limit`);
                 }
 
-                const fileName = `places/${user.uid}/${Date.now()}_${i}`;
+                const fileName = `places/${user.id}/${Date.now()}_${i}`;
                 const { error: uploadError } = await supabase.storage
                     .from('photos')
                     .upload(fileName, photo);
@@ -145,7 +179,7 @@ export default function MyGlobe() {
 
             const { error: insertError } = await supabase.from('places').insert([
                 {
-                    user_id: user.uid,
+                    user_id: user.id,
                     name: placeData.place.display_name.split(',')[0],
                     full_name: placeData.place.display_name,
                     location: {
@@ -167,7 +201,7 @@ export default function MyGlobe() {
             const { data: newPlaceData } = await supabase
                 .from('places')
                 .select('*')
-                .eq('user_id', user.uid)
+                .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .single();
@@ -228,12 +262,16 @@ export default function MyGlobe() {
                             WorldPin
                         </h1>
                         <p className="text-[11px] text-slate-400">
-                            {user?.email ?? 'Signed in'}
+                            {isOwner ? (user?.email ?? 'Signed in') : 'Viewing Friend\'s Map'}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-4">
+                    <UserSearch />
+                    <NotificationCenter />
+                    <FriendsList onSelectFriend={setViewUserId} currentViewId={targetUserId} />
+                    <div className="h-6 w-px bg-white/10" />
                     {/* Map Style Selector */}
                     <div className="relative">
                         <button
@@ -292,7 +330,7 @@ export default function MyGlobe() {
 
             {/* Globe Container */}
             <div className="flex-1 relative mt-16">
-                <GlobeMap places={places} onDelete={handleDeletePlace} mapStyle={mapStyle} />
+                <GlobeMap places={places} onDelete={isOwner ? handleDeletePlace : undefined} mapStyle={mapStyle} />
                 {loadingPlaces && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div className="px-4 py-2 rounded-full bg-black/60 border border-white/10 text-xs text-slate-300 backdrop-blur-md">
@@ -311,13 +349,15 @@ export default function MyGlobe() {
             </div>
 
             {/* FAB */}
-            <button
-                className="fixed bottom-8 right-8 w-14 h-14 bg-white text-black rounded-full shadow-[0_0_40px_rgba(255,255,255,0.3)] flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-[0_0_60px_rgba(255,255,255,0.5)] active:scale-95 z-40 group"
-                onClick={() => setIsAddModalOpen(true)}
-                aria-label="Add place"
-            >
-                <Plus size={24} className="group-hover:rotate-90 transition-transform duration-300" />
-            </button>
+            {isOwner && (
+                <button
+                    className="fixed bottom-8 right-8 w-14 h-14 bg-white text-black rounded-full shadow-[0_0_40px_rgba(255,255,255,0.3)] flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-[0_0_60px_rgba(255,255,255,0.5)] active:scale-95 z-40 group"
+                    onClick={() => setIsAddModalOpen(true)}
+                    aria-label="Add place"
+                >
+                    <Plus size={24} className="group-hover:rotate-90 transition-transform duration-300" />
+                </button>
+            )}
 
             {/* Add Place Modal */}
             <AddPlaceModal
